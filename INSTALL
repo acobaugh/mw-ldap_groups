@@ -1,0 +1,35 @@
+Note: This extensions kinda depends on having REMOTE_REALM and REMOTE_USER set.
+
+1) Copy LDAP_Groups.php to extensions/
+
+2) Add these to LocalSettings.php, adjusting accordingly:
+
+include_once("extensions/LDAP_Groups.php");
+$wgHooks['UserEffectiveGroups'][] = 'efLDAP_Groups';
+
+# REMOTE_REALM to ldap server mapping
+$realm_to_ldap = array(
+        'dce.psu.edu' => array(
+                'hostname' => 'dirapps.aset.psu.edu',
+                'base' => 'dc=psu,dc=edu',
+                'user_objectclass' => 'posixAccount',
+                'user_attr' => 'uid',
+                'group_objectclass' => 'groupOfNames',
+                'group_name_attr' => 'cn',
+                'member_attr' => 'member',
+                'name_attr' => 'cn',
+                'implicit_group_name' => 'psu'
+
+        ),
+        'BX.PSU.EDU' => array(
+                'hostname' => 'ldap.bx.psu.edu',
+                'base' => 'dc=bx,dc=psu,dc=edu',
+                'user_objectclass' => 'posixAccount',
+                'user_attr' => 'uid',
+                'group_objectclass' => 'groupOfNames',
+                'group_name_attr' => 'cn',
+                'member_attr' => 'member',
+                'name_attr' => 'cn',
+                'implicit_group_name' => 'bx'
+        )
+);
