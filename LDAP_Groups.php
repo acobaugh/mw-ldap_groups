@@ -13,9 +13,8 @@ $wgExtensionCredits['other'][] = array(
  * accepts: $user object and existing groups
  * returns: array of groups
  */
-function efLDAP_Groups($user, $mw_groups)
-{
-	global $realm_to_ldap, $_SERVER;
+function efLDAP_Groups($user, $mw_groups) {
+	global $realm_to_ldap, $_SERVER, $ldap_groups_always_search, $ldap_groups_enumerate_realm_server;
 
 	$uid = $user->mName;
 	$mId = $user->mId;
@@ -24,20 +23,23 @@ function efLDAP_Groups($user, $mw_groups)
 
 	/* if we're authenticating, get groups from ldap */
 	if (stripos($_SERVER['SCRIPT_NAME'], 'auth.php')) {
-		/* change this to a foreach over $realm_to_ldap
-		 * when uids match across ldap servers to add groups from
-		 * all servers
-		 */
-		if (array_key_exists($_SERVER['REMOTE_REALM'], $realm_to_ldap)) {
+		/* if server config exists for REMOTE_REALM and we want to enumerate over it */
+		if (array_key_exists($_SERVER['REMOTE_REALM'], $realm_to_ldap) && $ldap_groups_enumerate_realm_server === TRUE) {
 			$ldap_server = $realm_to_ldap[$_SERVER['REMOTE_REALM']];
 			$groups = array_merge($groups, efLDAP_Groups_enumerate_from_ldap($ldap_server, $uid));
-		
-			/* add implicit groups based on existence in the remote ldap server */
-			$groups = array_merge($groups, array($ldap_server['implicit_group_name']));
-			//$groups = array_merge($groups, efLDAP_Groups_get_implicit($ldap_server, $uid));
+		}
+		/* if there is a realm that we always want to enumerate groups from */
+		if (array_key_exists($ldap_groups_always_search, $realm_to_ldap) 
+			&& ($ldap_groups_always_search != $_SERVER['REMOTE_REALM'] || $ldap_groups_enumerate_realm_server === FALSE)) {
+			$ldap_server = $realm_to_ldap[$ldap_groups_always_search];
+			$groups = array_merge($groups, efLDAP_Groups_enumerate_from_ldap($ldap_server, $uid));
+		}
+		# add the implicit group for this realm
+		if (array_key_exists($_SERVER['REMOTE_REALM'], $realm_to_ldap)) {
+			$groups = array_merge($groups, array($realm_to_ldap[$_SERVER['REMOTE_REALM']]['implicit_group_name']));
+		}
 		/* now cache for future use */
 		efLDAP_Groups_write_cache($mId, $groups);
-		}
 	} else { /* else, get the groups from the cache */
 		$groups = efLDAP_Groups_enumerate_from_cache($mId);
 	}
@@ -57,13 +59,17 @@ function efLDAP_Groups($user, $mw_groups)
  */
 function efLDAP_Groups_enumerate_from_ldap($ldap_server, $uid)
 {
+	global $ldap_groups_strip_realm;
+
 	extract($ldap_server, EXTR_PREFIX_ALL, 'ldap');
 	
 	$ldapconn = ldap_connect($ldap_hostname) or error_log("Could not connect to ldap server.");
 	$ldapbind = ldap_bind($ldapconn) or error_log("Could not bind to ldap server $ldap_hostname.");
 
 	/* in the event that $uid is a full principal name */
-	list($uid, $realm) = split('@', $uid);
+	if ($ldap_groups_strip_realm) {
+		list($uid, $realm) = split('@', $uid);
+	}
 	/* uid's are stored all lowercase, and memberUid is caseExactMatch */
 	$uid = strtolower($uid);
 
@@ -72,7 +78,7 @@ function efLDAP_Groups_enumerate_from_ldap($ldap_server, $uid)
 	$sr = ldap_search($ldapconn, $ldap_base, $search_filter, array("dn"), 0, 0);
 	$results = ldap_get_entries($ldapconn, $sr);
 	$userDN = $results[0]['dn'];
-
+	
 	/* find the groups that contain our user */
 	$search_filter = "(&(objectClass=$ldap_group_objectclass)($ldap_member_attr=$userDN))";
 
