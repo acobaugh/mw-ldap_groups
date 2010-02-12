@@ -33,3 +33,27 @@ $realm_to_ldap = array(
                 'implicit_group_name' => 'bx'
         )
 );
+
+= Options =
+
+$ldap_groups_enumerate_realm_server = TRUE | FALSE
+
+	Whether or not to always pull groups from the ldap server
+	associated with this REMOTE_REALM.
+
+	This is a security issue, as the remote ldap groups could collide
+	with local ldap groups used in existing ACLs, as there is no way to
+	distinguish between groups from different realms within the ACLs.
+
+$ldap_groups_always_search = 'REALM'
+
+	If defined, groups will always be pulled from the ldap server associated
+	with REALM. This is mostly useful if the ldap server for REALM will return
+	a valid DN when REMOTE_USER is of the form user@REMOTE_REALM.
+
+$ldap_groups_strip_realm = TRUE | FALSE
+
+	Whether or not to strip @REALM before search for user_attr=REMOTE_USER
+
+	Useful if all remote realms set REMOTE_USER to user@REMOTE_REALM and the 
+	ldap server will return results when searching for user@REMOTE_REALM.
