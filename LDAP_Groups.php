@@ -1,11 +1,15 @@
 <?php
 
+if (!defined( 'MEDIAWIKI' )) {
+	die('This file is a MediaWiki extension, it is not a valid entry point');
+}
+
 $wgExtensionCredits['other'][] = array(
 	'name' => "LDAP_Groups",
 	'description' => "Allows pulling groups from multiple LDAP based on REMOTE_USER and REMOTE_REALM",
 	'version' => "1.0",
 	'author' => "Andy Cobaugh (phalenor@bx.psu.edu)",
-	'url' => "http://bx.psu.edu/"
+	'url' => "http://github.com/phalenor/mw-ldap_groups"
 );
 
 /* Function used as the UserEffectiveGroups hook
@@ -57,8 +61,7 @@ function efLDAP_Groups($user, $mw_groups) {
  *          search for
  * returns: array of ldap groups
  */
-function efLDAP_Groups_enumerate_from_ldap($ldap_server, $uid)
-{
+function efLDAP_Groups_enumerate_from_ldap($ldap_server, $uid) {
 	global $ldap_groups_strip_realm;
 
 	extract($ldap_server, EXTR_PREFIX_ALL, 'ldap');
@@ -88,10 +91,8 @@ function efLDAP_Groups_enumerate_from_ldap($ldap_server, $uid)
 	
 	$groups = array();
 
-	foreach ($results as $entry)
-	{
-		if (array_key_exists($ldap_group_name_attr, $entry))
-		{
+	foreach ($results as $entry) {
+		if (array_key_exists($ldap_group_name_attr, $entry)) {
 			array_push($groups, $entry[$ldap_group_name_attr][0]);
 		}
 	}
